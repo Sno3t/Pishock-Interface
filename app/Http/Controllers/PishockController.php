@@ -1,8 +1,6 @@
 <?php
 
-
 namespace App\Http\Controllers;
-
 
 use App\Enums\Operations;
 use App\Http\Requests\OperationRequest;
@@ -18,9 +16,13 @@ use Illuminate\Support\Facades\Log;
 class PishockController extends Controller
 {
     protected string $baseUrl = 'https://do.pishock.com/api/apioperate';
+
     protected string $username;
+
     protected string $apiKey;
+
     protected string $name = 'Pishock interface';
+
     private array $devices;
 
     public function __construct()
@@ -30,6 +32,9 @@ class PishockController extends Controller
         $this->devices = Device::all()->pluck('device_name', 'share_code')->toArray();
     }
 
+    /**
+     * @return View
+     */
     public function index(): View
     {
         $settings = Settings::all();
@@ -113,6 +118,9 @@ class PishockController extends Controller
         return null;
     }
 
+    /**
+     * @return View
+     */
     public function deviceManager(): view
     {
         return view('deviceManager', ['devices' => Device::all()]);

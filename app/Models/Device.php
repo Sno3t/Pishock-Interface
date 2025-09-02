@@ -1,12 +1,15 @@
 <?php
 
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Device extends Model
 {
+
+    private string $name;
+
+    private string $shareCode;
 
     /**
      * @var string[]
@@ -15,15 +18,6 @@ class Device extends Model
         'device_name',
         'share_code',
     ];
-
-
-    private string $name;
-
-    private string $username;
-
-    private string $apiKey;
-
-    private string $shareCode;
 
     /**
      * @return string
@@ -35,42 +29,11 @@ class Device extends Model
 
     /**
      * @param string $name
+     * @return void
      */
     public function setName(string $name): void
     {
         $this->name = $name;
-    }
-
-    /**
-     * @return string
-     */
-    public function getUsername(): string
-    {
-        return $this->username;
-    }
-
-    /**
-     * @param string $username
-     */
-    public function setUsername(string $username): void
-    {
-        $this->username = $username;
-    }
-
-    /**
-     * @return string
-     */
-    public function getApiKey(): string
-    {
-        return $this->apiKey;
-    }
-
-    /**
-     * @param string $apiKey
-     */
-    public function setApiKey(string $apiKey): void
-    {
-        $this->apiKey = $apiKey;
     }
 
     /**
@@ -83,11 +46,10 @@ class Device extends Model
 
     /**
      * @param string $shareCode
+     * @return void
      */
     public function setShareCode(string $shareCode): void
     {
         $this->shareCode = $shareCode;
     }
-
-
 }

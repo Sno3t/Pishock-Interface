@@ -13,7 +13,7 @@ class Operations
     public const BEEP = 2;
 
     /**
-     * @var array|string[]
+     * @var array|int[]
      */
     public static array $types = [
         self::SHOCK,
