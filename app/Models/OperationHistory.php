@@ -21,10 +21,16 @@ class OperationHistory extends Model
         'type',
         'value',
         'user_id',
+        'operator_token_id',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function operatorToken(): BelongsTo
+    {
+        return $this->belongsTo(OperatorToken::class);
     }
 }

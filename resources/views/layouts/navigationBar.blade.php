@@ -8,6 +8,9 @@
                 <a href="{{ route('devices.index') }}" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                     Device management
                 </a>
+                <a href="{{ route('operators.index') }}" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
+                    Operator links
+                </a>
             </div>
 
             <form action="{{ route('logout') }}" method="POST">

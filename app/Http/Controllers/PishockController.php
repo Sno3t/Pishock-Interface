@@ -7,6 +7,7 @@ use App\Enums\Operations;
 use App\Http\Requests\OperationRequest;
 use App\Models\Device;
 use App\Models\OperationHistory;
+use App\Models\OperatorToken;
 use App\Models\Settings;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -38,9 +39,33 @@ class PishockController extends Controller
     }
 
     /**
+     * The owner's own control panel.
+     *
      * @return View
      */
     public function index(): View
+    {
+        return $this->renderControls();
+    }
+
+    /**
+     * A named operator's control panel, reached via their share link.
+     *
+     * @param string $token
+     * @return View
+     */
+    public function operate(string $token): View
+    {
+        $operator = OperatorToken::active()->where('token', $token)->firstOrFail();
+
+        return $this->renderControls($operator);
+    }
+
+    /**
+     * @param OperatorToken|null $operator
+     * @return View
+     */
+    protected function renderControls(?OperatorToken $operator = null): View
     {
         $settings = Settings::all();
         $maxValues = [];
@@ -49,7 +74,11 @@ class PishockController extends Controller
             $maxValues[$setting->operation][$setting->type] = $setting->max_value;
         }
 
-        return view('pishock', ['devices' => $this->devices, 'maxValues' => $maxValues]);
+        return view('pishock', [
+            'devices' => $this->devices,
+            'maxValues' => $maxValues,
+            'operator' => $operator,
+        ]);
     }
 
     /**
@@ -57,6 +86,28 @@ class PishockController extends Controller
      * @return RedirectResponse
      */
     public function sendCommand(OperationRequest $request): RedirectResponse
+    {
+        return $this->handleCommand($request);
+    }
+
+    /**
+     * @param OperationRequest $request
+     * @param string $token
+     * @return RedirectResponse
+     */
+    public function sendCommandAs(OperationRequest $request, string $token): RedirectResponse
+    {
+        $operator = OperatorToken::active()->where('token', $token)->firstOrFail();
+
+        return $this->handleCommand($request, $operator);
+    }
+
+    /**
+     * @param OperationRequest $request
+     * @param OperatorToken|null $operator
+     * @return RedirectResponse
+     */
+    protected function handleCommand(OperationRequest $request, ?OperatorToken $operator = null): RedirectResponse
     {
         $operation = $request->input('operation');
         $devices = $request->input('deviceShareCodes');
@@ -73,16 +124,16 @@ class PishockController extends Controller
             default => 'Invalid operation',
         };
 
-        $this->recordHistory($operation, 'duration', $duration);
+        $this->recordHistory($operation, 'duration', $duration, $operator);
         if ($intensity !== null) {
-            $this->recordHistory($operation, 'intensity', $intensity);
+            $this->recordHistory($operation, 'intensity', $intensity, $operator);
         }
 
         return redirect()->back()->with('response', $response);
     }
 
     /**
-     * Caps a requested value at the operator-configured max for this operation/type,
+     * Caps a requested value at the owner-configured max for this operation/type,
      * so the max-value setting can't be bypassed by posting the form directly.
      */
     protected function clampToConfiguredMax(string $operation, string $type, int $value): int
@@ -92,13 +143,14 @@ class PishockController extends Controller
         return $max !== null ? min($value, $max) : $value;
     }
 
-    protected function recordHistory(string $operation, string $type, int $value): void
+    protected function recordHistory(string $operation, string $type, int $value, ?OperatorToken $operator = null): void
     {
         OperationHistory::create([
             'operation' => $operation,
             'type' => $type,
             'value' => $value,
-            'user_id' => Auth::id(),
+            'user_id' => $operator ? null : Auth::id(),
+            'operator_token_id' => $operator?->id,
         ]);
     }
 

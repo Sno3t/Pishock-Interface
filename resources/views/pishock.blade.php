@@ -1,12 +1,12 @@
 <x-simple-layout title="PiShock Controller">
 @if(!empty($devices))
-    @auth
-        @include('layouts.navigationBar')
-    @else
-        <div class="mx-auto max-w-xl px-4 py-4 text-right sm:px-6 lg:px-8">
-            <a href="{{ route('login') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Login</a>
+    @if ($operator)
+        <div class="mx-auto max-w-xl px-4 py-4 text-sm text-gray-600 dark:text-gray-400 sm:px-6 lg:px-8">
+            Controlling as <span class="font-medium text-gray-900 dark:text-gray-100">{{ $operator->name }}</span>
         </div>
-    @endauth
+    @else
+        @include('layouts.navigationBar')
+    @endif
 
     <div class="py-12">
         <div class="mx-auto max-w-xl sm:px-6 lg:px-8">
@@ -19,7 +19,9 @@
                     </div>
                 @endif
 
-                <form id="pishock-form" method="POST" action="{{ route('pishock') }}" class="space-y-6">
+                <form id="pishock-form" method="POST"
+                      action="{{ $operator ? route('pishock.operate.send', $operator->token) : route('pishock') }}"
+                      class="space-y-6">
                     @csrf
 
                     <div>
@@ -55,9 +57,9 @@
                         </div>
                         <input type="range" id="duration" name="duration" min="1" max="100" value="1"
                                class="max-indicator mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-indigo-600 dark:bg-gray-700">
-                        @auth
+                        @unless ($operator)
                             <x-secondary-button type="button" id="editDurationMax" class="mt-2">Edit Max Duration</x-secondary-button>
-                        @endauth
+                        @endunless
                     </div>
 
                     <div id="intensity-group">
@@ -67,9 +69,9 @@
                         </div>
                         <input type="range" id="intensity" name="intensity" min="1" max="100" value="1"
                                class="max-indicator mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-indigo-600 dark:bg-gray-700">
-                        @auth
+                        @unless ($operator)
                             <x-secondary-button type="button" id="editIntensityMax" class="mt-2">Edit Max Intensity</x-secondary-button>
-                        @endauth
+                        @endunless
                     </div>
 
                     <x-primary-button type="submit">Send Command</x-primary-button>
@@ -79,17 +81,17 @@
     </div>
 @else
     <div class="mx-auto max-w-xl px-4 py-24 text-center sm:px-6 lg:px-8">
-        @auth
+        @if ($operator)
+            <p class="text-lg text-gray-700 dark:text-gray-300">
+                Oops! The owner of this PiShock controller hasn't set up any devices yet.
+            </p>
+        @else
             <p class="text-lg text-gray-700 dark:text-gray-300">
                 No devices have been set up yet. Go to the
                 <a href="{{ route('devices.index') }}" class="text-indigo-600 hover:text-indigo-500">device manager</a>
                 to add one.
             </p>
-        @else
-            <p class="text-lg text-gray-700 dark:text-gray-300">
-                Oops! The owner of this PiShock controller hasn't set up any devices yet.
-            </p>
-        @endauth
+        @endif
     </div>
 @endif
 
@@ -228,7 +230,7 @@
 
         setSliderMaxValues();
 
-        @auth
+        @unless ($operator)
         // Persist an edited max value for the current operation to the server
         async function updateMaxValue(type, newValue) {
             if (isNaN(newValue) || newValue < 1 || newValue > 100) {
@@ -281,7 +283,7 @@
                 updateMaxValue('intensity', parseInt(newMaxIntensity, 10));
             }
         });
-        @endauth
+        @endunless
     });
 </script>
 </x-simple-layout>
