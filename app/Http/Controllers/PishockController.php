@@ -10,7 +10,9 @@ use App\Models\OperationHistory;
 use App\Models\OperatorToken;
 use App\Models\Settings;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -173,48 +175,78 @@ class PishockController extends Controller
     }
 
     /**
+     * Sends the operation to each device independently, so one device
+     * failing (bad share code, offline, etc.) doesn't lose the results
+     * of the others.
+     *
      * @param string $operation
      * @param int $duration
      * @param array $deviceShareCodes
      * @param int|null $intensity
-     * @return string|null
+     * @return string
      */
-    protected function sendRequest(string $operation, int $duration, array $deviceShareCodes, ?int $intensity = null): ?string
+    protected function sendRequest(string $operation, int $duration, array $deviceShareCodes, ?int $intensity = null): string
     {
-        try {
-            $client = new Client();
+        $client = new Client();
+        $results = [];
 
-            $responses = [];
+        foreach ($deviceShareCodes as $deviceCode) {
+            $deviceName = $this->devices[$deviceCode] ?? $deviceCode;
 
-            foreach ($deviceShareCodes as $deviceCode) {
-                $params = [
-                    'Username' => $this->username,
-                    'Name' => $this->name,
-                    'Code' => $deviceCode,
-                    'Apikey' => $this->apiKey,
-                    'Op' => $operation,
-                    'Duration' => $duration,
-                ];
+            $params = [
+                'Username' => $this->username,
+                'Name' => $this->name,
+                'Code' => $deviceCode,
+                'Apikey' => $this->apiKey,
+                'Op' => $operation,
+                'Duration' => $duration,
+            ];
 
-                if ($intensity !== null) {
-                    $params['Intensity'] = $intensity;
-                }
-
-                $response = $client->post($this->baseUrl, [
-                    'headers' => [
-                        'Content-Type' => 'application/json',
-                    ],
-                    'body' => json_encode($params),
-                ]);
-
-                $responses[] = $response->getBody()->getContents();
+            if ($intensity !== null) {
+                $params['Intensity'] = $intensity;
             }
 
-            return implode(', ', $responses);
-        } catch (GuzzleException $e) {
-            Log::error($e);
+            $results[] = "{$deviceName}: " . $this->sendToDevice($client, $params);
         }
-        return null;
+
+        return implode(' | ', $results);
+    }
+
+    /**
+     * @param Client $client
+     * @param array $params
+     * @return string
+     */
+    protected function sendToDevice(Client $client, array $params): string
+    {
+        // Never log $params: it contains the PiShock API key.
+        $context = ['operation' => $params['Op'], 'device' => $params['Code']];
+
+        try {
+            $response = $client->post($this->baseUrl, [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ],
+                'body' => json_encode($params),
+            ]);
+
+            return trim($response->getBody()->getContents()) ?: 'Sent.';
+        } catch (ConnectException $e) {
+            Log::error('PiShock request failed: could not reach the API.', $context);
+
+            return 'Could not reach PiShock, please try again.';
+        } catch (RequestException $e) {
+            $status = $e->getResponse()?->getStatusCode();
+            Log::error('PiShock request was rejected.', $context + ['status' => $status]);
+
+            return $status
+                ? "PiShock rejected the request (HTTP {$status})."
+                : 'PiShock rejected the request.';
+        } catch (GuzzleException $e) {
+            Log::error('PiShock request failed unexpectedly.', $context);
+
+            return 'Something went wrong sending this command.';
+        }
     }
 
     /**
