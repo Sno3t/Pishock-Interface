@@ -16,7 +16,7 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/', [PishockController::class, 'index']);
     Route::get('/pishock', [PishockController::class, 'index'])->name('pishock');
-    Route::post('/pishock', [PishockController::class, 'sendCommand']);
+    Route::post('/pishock', [PishockController::class, 'sendCommand'])->middleware('throttle:commands');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -35,7 +35,9 @@ Route::middleware('auth')->group(function () {
 
 // Named operator links: no login required, scoped to a single revocable token.
 Route::get('/pishock/{token}', [PishockController::class, 'operate'])->name('pishock.operate');
-Route::post('/pishock/{token}', [PishockController::class, 'sendCommandAs'])->name('pishock.operate.send');
+Route::post('/pishock/{token}', [PishockController::class, 'sendCommandAs'])
+    ->middleware('throttle:commands')
+    ->name('pishock.operate.send');
 
 // Polled by the control panel so operators see a max-value change without reloading.
 Route::get('/max-values', [PishockController::class, 'maxValues'])->name('maxValues');

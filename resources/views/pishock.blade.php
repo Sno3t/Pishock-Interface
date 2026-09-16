@@ -19,6 +19,12 @@
                     </div>
                 @endif
 
+                @if (session('error'))
+                    <div class="rounded-md bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
                 <form id="pishock-form" method="POST"
                       action="{{ $operator ? route('pishock.operate.send', $operator->token) : route('pishock') }}"
                       class="space-y-6">
