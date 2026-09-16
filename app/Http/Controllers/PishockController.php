@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ControlTypes;
 use App\Enums\Operations;
 use App\Http\Requests\OperationRequest;
 use App\Models\Device;
@@ -9,7 +10,9 @@ use App\Models\Settings;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 
@@ -80,7 +83,7 @@ class PishockController extends Controller
         try {
             $client = new Client();
 
-            $operations = [];
+            $responses = [];
 
             foreach ($deviceShareCodes as $deviceCode) {
                 $params = [
@@ -96,22 +99,17 @@ class PishockController extends Controller
                     $params['Intensity'] = $intensity;
                 }
 
-                $operations[] = $params;
-            }
-
-
-            $responses = [];
-
-            foreach ($operations as $operation) {
-                $response[] = $client->post($this->baseUrl, [
+                $response = $client->post($this->baseUrl, [
                     'headers' => [
                         'Content-Type' => 'application/json',
                     ],
-                    'body' => json_encode($operation),
+                    'body' => json_encode($params),
                 ]);
+
+                $responses[] = $response->getBody()->getContents();
             }
 
-//            return $response->getBody()->getContents();
+            return implode(', ', $responses);
         } catch (GuzzleException $e) {
             Log::error($e);
         }
@@ -119,12 +117,26 @@ class PishockController extends Controller
     }
 
     /**
-     * @return View
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function deviceManager(): view
+    public function updateMaxValues(Request $request): JsonResponse
     {
-        return view('deviceManager', ['devices' => Device::all()]);
+        $validated = $request->validate([
+            'operation' => ['required', 'string', 'in:' . implode(',', ControlTypes::$types)],
+            'type' => ['required', 'string', 'in:duration,intensity'],
+            'max_value' => ['required', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        Settings::updateOrCreate(
+            ['operation' => $validated['operation'], 'type' => $validated['type']],
+            ['max_value' => $validated['max_value']]
+        );
+
+        return response()->json([
+            'operation' => $validated['operation'],
+            'type' => $validated['type'],
+            'maxValue' => $validated['max_value'],
+        ]);
     }
-
-
 }

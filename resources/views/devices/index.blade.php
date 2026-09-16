@@ -1,7 +1,7 @@
 {{--@extends('layouts.app')--}}
 {{--@section('content')--}}
 <div class="container">
-    @include('.layouts.navigationBar')
+    @include('layouts.navigationBar')
     <h1>Manage shockers</h1>
 
     <a href="{{ route('devices.create') }}" class="btn btn-primary mb-3">Add new device</a>

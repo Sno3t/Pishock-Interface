@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class OperationHistory extends Model
 {
+    const UPDATED_AT = null;
+
     /**
      * @var string[]
      */

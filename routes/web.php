@@ -15,6 +15,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/updateMaxValues', [PishockController::class, 'updateMaxValues'])->name('updateMaxValues');
 });
 
 Route::get('/', [PishockController::class, 'index']);
@@ -22,8 +24,6 @@ Route::get('/pishock', [PishockController::class, 'index'])->name('pishock');
 Route::post('/pishock', [PishockController::class, 'sendCommand']);
 
 Route::resource('devices', DeviceController::class);
-
-Route::post('/updateMaxValues', [PiShockController::class, 'updateMaxValues'])->name('updateMaxValues');
 
 
 require __DIR__.'/auth.php';

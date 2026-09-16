@@ -1,0 +1,37 @@
+services:
+    app:
+        build:
+            context: .
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+        ports:
+            - "8000:8000"
+        depends_on:
+            db:
+                condition: service_healthy
+        command: >
+            sh -c "composer install --no-interaction --prefer-dist &&
+                   php artisan key:generate --force &&
+                   php artisan migrate --force &&
+                   php artisan serve --host=0.0.0.0 --port=8000"
+
+    db:
+        image: mariadb:11
+        environment:
+            MARIADB_DATABASE: pishock
+            MARIADB_ROOT_PASSWORD: root
+            MARIADB_USER: pishock
+            MARIADB_PASSWORD: pishock
+        ports:
+            - "3306:3306"
+        volumes:
+            - pishock-db-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+volumes:
+    pishock-db-data:

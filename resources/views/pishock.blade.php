@@ -16,7 +16,7 @@
 
 @if(!empty($devices))
     @auth
-        @include('.layouts.navigationBar')
+        @include('layouts.navigationBar')
     @else
         <a href="{{ route('login') }}">Login</a>
     @endauth
@@ -75,7 +75,7 @@
                     href="{{ route('devices.index') }}">device manager</a> to add devices.
             </div>
         </div>
-    @elseauth
+    @else
         <div class="container">
             <div class="h1 align-content-center">Oops! The owner of this Pishock controller has no devices setup!</div>
         </div>
@@ -210,20 +210,56 @@
         setSliderMaxValues();
 
         @auth
+        // Persist an edited max value for the current operation to the server
+        async function updateMaxValue(type, newValue) {
+            if (isNaN(newValue) || newValue < 1 || newValue > 100) {
+                alert('Please enter a number between 1 and 100.');
+                return;
+            }
+
+            const token = form.querySelector('input[name="_token"]').value;
+
+            try {
+                const response = await fetch('{{ route('updateMaxValues') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({
+                        operation: operationSelect.value,
+                        type,
+                        max_value: newValue,
+                    }),
+                });
+
+                if (!response.ok) {
+                    alert('Failed to save the new max value.');
+                    return;
+                }
+
+                const data = await response.json();
+                maxValues[data.operation] = maxValues[data.operation] || {};
+                maxValues[data.operation][data.type] = data.maxValue;
+                setSliderMaxValues();
+            } catch (e) {
+                alert('Failed to save the new max value.');
+            }
+        }
+
         // Event listeners for edit max buttons
         document.getElementById('editDurationMax').addEventListener('click', () => {
             const newMaxDuration = prompt('Enter new max duration:');
             if (newMaxDuration !== null) {
-                maxValues[operationSelect.value].duration = parseInt(newMaxDuration, 10);
-                setSliderMaxValues();
+                updateMaxValue('duration', parseInt(newMaxDuration, 10));
             }
         });
 
         document.getElementById('editIntensityMax').addEventListener('click', () => {
             const newMaxIntensity = prompt('Enter new max intensity:');
             if (newMaxIntensity !== null) {
-                maxValues[operationSelect.value].intensity = parseInt(newMaxIntensity, 10);
-                setSliderMaxValues();
+                updateMaxValue('intensity', parseInt(newMaxIntensity, 10));
             }
         });
         @endauth
