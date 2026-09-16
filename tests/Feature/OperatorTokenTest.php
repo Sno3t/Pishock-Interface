@@ -62,6 +62,10 @@ class OperatorTokenTest extends TestCase
         $this->assertDatabaseHas('operation_history', [
             'operation' => 'beep',
             'value' => 5,
+            // No real PISHOCK_API_KEY is configured in tests, so this
+            // genuinely fails against PiShock's API - exercising the
+            // real failure path, not just asserting a hardcoded value.
+            'succeeded' => false,
             'operator_token_id' => $operatorToken->id,
             'user_id' => null,
         ]);

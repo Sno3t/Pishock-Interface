@@ -137,19 +137,19 @@ class PishockController extends Controller
             ? $this->clampToConfiguredMax($operation, 'intensity', (int) $request->input('intensity'))
             : null;
 
-        $response = match ($operation) {
+        $outcome = match ($operation) {
             'shock' => $this->sendRequest(Operations::SHOCK, $duration, $devices, $intensity),
             'vibrate' => $this->sendRequest(Operations::VIBRATE, $duration, $devices, $intensity),
             'beep' => $this->sendRequest(Operations::BEEP, $duration, $devices),
-            default => 'Invalid operation',
+            default => ['message' => 'Invalid operation', 'succeeded' => false],
         };
 
-        $this->recordHistory($operation, 'duration', $duration, $operator);
+        $this->recordHistory($operation, 'duration', $duration, $outcome['succeeded'], $operator);
         if ($intensity !== null) {
-            $this->recordHistory($operation, 'intensity', $intensity, $operator);
+            $this->recordHistory($operation, 'intensity', $intensity, $outcome['succeeded'], $operator);
         }
 
-        return redirect()->back()->with('response', $response);
+        return redirect()->back()->with('response', $outcome['message']);
     }
 
     /**
@@ -163,12 +163,13 @@ class PishockController extends Controller
         return $max !== null ? min($value, $max) : $value;
     }
 
-    protected function recordHistory(string $operation, string $type, int $value, ?OperatorToken $operator = null): void
+    protected function recordHistory(string $operation, string $type, int $value, bool $succeeded, ?OperatorToken $operator = null): void
     {
         OperationHistory::create([
             'operation' => $operation,
             'type' => $type,
             'value' => $value,
+            'succeeded' => $succeeded,
             'user_id' => $operator ? null : Auth::id(),
             'operator_token_id' => $operator?->id,
         ]);
@@ -177,18 +178,19 @@ class PishockController extends Controller
     /**
      * Sends the operation to each device independently, so one device
      * failing (bad share code, offline, etc.) doesn't lose the results
-     * of the others.
+     * of the others. Overall "succeeded" is true only if every device did.
      *
      * @param string $operation
      * @param int $duration
      * @param array $deviceShareCodes
      * @param int|null $intensity
-     * @return string
+     * @return array{message: string, succeeded: bool}
      */
-    protected function sendRequest(string $operation, int $duration, array $deviceShareCodes, ?int $intensity = null): string
+    protected function sendRequest(string $operation, int $duration, array $deviceShareCodes, ?int $intensity = null): array
     {
         $client = new Client();
         $results = [];
+        $succeeded = true;
 
         foreach ($deviceShareCodes as $deviceCode) {
             $deviceName = $this->devices[$deviceCode] ?? $deviceCode;
@@ -206,18 +208,23 @@ class PishockController extends Controller
                 $params['Intensity'] = $intensity;
             }
 
-            $results[] = "{$deviceName}: " . $this->sendToDevice($client, $params);
+            $outcome = $this->sendToDevice($client, $params);
+            $succeeded = $succeeded && $outcome['success'];
+            $results[] = "{$deviceName}: " . $outcome['message'];
         }
 
-        return implode(' | ', $results);
+        return [
+            'message' => implode(' | ', $results),
+            'succeeded' => $succeeded,
+        ];
     }
 
     /**
      * @param Client $client
      * @param array $params
-     * @return string
+     * @return array{success: bool, message: string}
      */
-    protected function sendToDevice(Client $client, array $params): string
+    protected function sendToDevice(Client $client, array $params): array
     {
         // Never log $params: it contains the PiShock API key.
         $context = ['operation' => $params['Op'], 'device' => $params['Code']];
@@ -230,22 +237,25 @@ class PishockController extends Controller
                 'body' => json_encode($params),
             ]);
 
-            return trim($response->getBody()->getContents()) ?: 'Sent.';
+            return ['success' => true, 'message' => trim($response->getBody()->getContents()) ?: 'Sent.'];
         } catch (ConnectException $e) {
             Log::error('PiShock request failed: could not reach the API.', $context);
 
-            return 'Could not reach PiShock, please try again.';
+            return ['success' => false, 'message' => 'Could not reach PiShock, please try again.'];
         } catch (RequestException $e) {
             $status = $e->getResponse()?->getStatusCode();
             Log::error('PiShock request was rejected.', $context + ['status' => $status]);
 
-            return $status
-                ? "PiShock rejected the request (HTTP {$status})."
-                : 'PiShock rejected the request.';
+            return [
+                'success' => false,
+                'message' => $status
+                    ? "PiShock rejected the request (HTTP {$status})."
+                    : 'PiShock rejected the request.',
+            ];
         } catch (GuzzleException $e) {
             Log::error('PiShock request failed unexpectedly.', $context);
 
-            return 'Something went wrong sending this command.';
+            return ['success' => false, 'message' => 'Something went wrong sending this command.'];
         }
     }
 

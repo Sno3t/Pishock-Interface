@@ -42,4 +42,92 @@ class OperationHistoryTest extends TestCase
         $response->assertSee('Owner');
         $response->assertSee('Alex');
     }
+
+    public function test_duration_and_intensity_from_the_same_command_are_shown_as_one_row(): void
+    {
+        $user = User::factory()->create();
+
+        OperationHistory::create([
+            'operation' => 'shock',
+            'type' => 'duration',
+            'value' => 10,
+            'user_id' => $user->id,
+        ]);
+
+        OperationHistory::create([
+            'operation' => 'shock',
+            'type' => 'intensity',
+            'value' => 40,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->get('/history');
+
+        $response->assertOk();
+        $response->assertSeeTextInOrder(['10', '40']);
+        $this->assertSame(1, substr_count($response->getContent(), '>shock<'));
+    }
+
+    public function test_unrelated_commands_from_different_actors_are_not_merged(): void
+    {
+        $user = User::factory()->create();
+        $operatorToken = OperatorToken::create(['name' => 'Alex']);
+
+        OperationHistory::create([
+            'operation' => 'beep',
+            'type' => 'duration',
+            'value' => 5,
+            'user_id' => $user->id,
+        ]);
+
+        OperationHistory::create([
+            'operation' => 'beep',
+            'type' => 'duration',
+            'value' => 7,
+            'operator_token_id' => $operatorToken->id,
+        ]);
+
+        $response = $this->actingAs($user)->get('/history');
+
+        $response->assertOk();
+        $this->assertSame(2, substr_count($response->getContent(), '>beep<'));
+    }
+
+    public function test_a_failed_command_is_shown_as_failed(): void
+    {
+        $user = User::factory()->create();
+
+        OperationHistory::create([
+            'operation' => 'beep',
+            'type' => 'duration',
+            'value' => 5,
+            'succeeded' => false,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->get('/history');
+
+        $response->assertOk();
+        $response->assertSee('Failed');
+        $response->assertDontSee('Success');
+    }
+
+    public function test_a_successful_command_is_shown_as_success(): void
+    {
+        $user = User::factory()->create();
+
+        OperationHistory::create([
+            'operation' => 'beep',
+            'type' => 'duration',
+            'value' => 5,
+            'succeeded' => true,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->get('/history');
+
+        $response->assertOk();
+        $response->assertSee('Success');
+        $response->assertDontSee('Failed');
+    }
 }
