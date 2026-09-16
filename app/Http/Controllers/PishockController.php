@@ -6,6 +6,7 @@ use App\Enums\ControlTypes;
 use App\Enums\Operations;
 use App\Http\Requests\OperationRequest;
 use App\Models\Device;
+use App\Models\OperationHistory;
 use App\Models\Settings;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class PishockController extends Controller
@@ -57,9 +59,12 @@ class PishockController extends Controller
     public function sendCommand(OperationRequest $request): RedirectResponse
     {
         $operation = $request->input('operation');
-        $duration = $request->input('duration');
-        $intensity = $request->input('intensity');
         $devices = $request->input('deviceShareCodes');
+
+        $duration = $this->clampToConfiguredMax($operation, 'duration', (int) $request->input('duration'));
+        $intensity = $request->filled('intensity')
+            ? $this->clampToConfiguredMax($operation, 'intensity', (int) $request->input('intensity'))
+            : null;
 
         $response = match ($operation) {
             'shock' => $this->sendRequest(Operations::SHOCK, $duration, $devices, $intensity),
@@ -68,7 +73,33 @@ class PishockController extends Controller
             default => 'Invalid operation',
         };
 
+        $this->recordHistory($operation, 'duration', $duration);
+        if ($intensity !== null) {
+            $this->recordHistory($operation, 'intensity', $intensity);
+        }
+
         return redirect()->back()->with('response', $response);
+    }
+
+    /**
+     * Caps a requested value at the operator-configured max for this operation/type,
+     * so the max-value setting can't be bypassed by posting the form directly.
+     */
+    protected function clampToConfiguredMax(string $operation, string $type, int $value): int
+    {
+        $max = Settings::where('operation', $operation)->where('type', $type)->value('max_value');
+
+        return $max !== null ? min($value, $max) : $value;
+    }
+
+    protected function recordHistory(string $operation, string $type, int $value): void
+    {
+        OperationHistory::create([
+            'operation' => $operation,
+            'type' => $type,
+            'value' => $value,
+            'user_id' => Auth::id(),
+        ]);
     }
 
     /**

@@ -1,92 +1,111 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PiShock Controller</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-
-    <style>
-        .right-stripe {
-            background: linear-gradient(to right, transparent calc(100% - var(--gray-percentage, 0%)), grey 0%);
-        }
-    </style>
-</head>
-<body>
-
+<x-simple-layout title="PiShock Controller">
 @if(!empty($devices))
     @auth
         @include('layouts.navigationBar')
     @else
-        <a href="{{ route('login') }}">Login</a>
+        <div class="mx-auto max-w-xl px-4 py-4 text-right sm:px-6 lg:px-8">
+            <a href="{{ route('login') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Login</a>
+        </div>
     @endauth
 
-    <div class="container mt-5">
-        <h1>PiShock Controller</h1>
-        @if (session('response'))
-            <div class="alert alert-info">{{ session('response') }}</div>
-        @endif
-        <form id="pishock-form" method="POST" action="{{ route('pishock') }}">
-            @csrf
-            <div class="mb-3">
-                <label for="deviceShareCodes">Devices:</label><br>
-                @foreach ($devices as $deviceCode => $deviceName)
-                    <input type="checkbox" name="deviceShareCodes[]" id="device_{{ $deviceCode }}"
-                           value="{{ $deviceCode }}">
-                    <label for="device_{{ $deviceCode }}">{{ $deviceName }}</label> <br>
-                @endforeach
-                <div id="device-error" class="text-danger" style="display: none;">Please select at least one device.
-                </div>
+    <div class="py-12">
+        <div class="mx-auto max-w-xl sm:px-6 lg:px-8">
+            <div class="space-y-6 bg-white p-6 shadow-sm dark:bg-gray-800 sm:rounded-lg">
+                <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">PiShock Controller</h1>
+
+                @if (session('response'))
+                    <div class="rounded-md bg-indigo-50 p-4 text-sm text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                        {{ session('response') }}
+                    </div>
+                @endif
+
+                <form id="pishock-form" method="POST" action="{{ route('pishock') }}" class="space-y-6">
+                    @csrf
+
+                    <div>
+                        <x-input-label value="Devices" />
+                        <div class="mt-2 space-y-2">
+                            @foreach ($devices as $deviceCode => $deviceName)
+                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" name="deviceShareCodes[]" id="device_{{ $deviceCode }}" value="{{ $deviceCode }}"
+                                           class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900">
+                                    {{ $deviceName }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <p id="device-error" class="mt-1 text-sm text-red-600 dark:text-red-400" style="display: none;">
+                            Please select at least one device.
+                        </p>
+                    </div>
+
+                    <div>
+                        <x-input-label for="operation" value="Operation" />
+                        <select id="operation" name="operation" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                            <option value="shock">Shock</option>
+                            <option value="vibrate">Vibrate</option>
+                            <option value="beep">Beep</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <x-input-label for="duration" value="Duration (seconds)" />
+                            <span id="durationValue" class="text-sm text-gray-500 dark:text-gray-400">1</span>
+                        </div>
+                        <input type="range" id="duration" name="duration" min="1" max="100" value="1"
+                               class="max-indicator mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-indigo-600 dark:bg-gray-700">
+                        @auth
+                            <x-secondary-button type="button" id="editDurationMax" class="mt-2">Edit Max Duration</x-secondary-button>
+                        @endauth
+                    </div>
+
+                    <div id="intensity-group">
+                        <div class="flex items-center justify-between">
+                            <x-input-label for="intensity" value="Intensity" />
+                            <span id="intensityValue" class="text-sm text-gray-500 dark:text-gray-400">1</span>
+                        </div>
+                        <input type="range" id="intensity" name="intensity" min="1" max="100" value="1"
+                               class="max-indicator mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-indigo-600 dark:bg-gray-700">
+                        @auth
+                            <x-secondary-button type="button" id="editIntensityMax" class="mt-2">Edit Max Intensity</x-secondary-button>
+                        @endauth
+                    </div>
+
+                    <x-primary-button type="submit">Send Command</x-primary-button>
+                </form>
             </div>
-            <div class="mb-3">
-                <label for="operation" class="form-label">Operation</label>
-                <select class="form-select" id="operation" name="operation" required>
-                    <option value="shock">Shock</option>
-                    <option value="vibrate">Vibrate</option>
-                    <option value="beep">Beep</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="duration" class="form-label">Duration (seconds): <span id="durationValue">1</span></label>
-                <input type="range" class="form-range right-stripe" id="duration" name="duration" min="1" max="100"
-                       value="1">
-                @auth
-                    <button type="button" class="btn btn-secondary btn-sm" id="editDurationMax">Edit Max Duration
-                    </button>
-                @endauth
-            </div>
-            <div class="mb-3" id="intensity-group">
-                <label for="intensity" class="form-label">Intensity: <span id="intensityValue">1</span></label>
-                <input type="range" class="form-range right-stripe" id="intensity" name="intensity" min="1" max="100"
-                       value="1">
-                @auth
-                    <button type="button" class="btn btn-secondary btn-sm" id="editIntensityMax">Edit Max Intensity
-                    </button>
-                @endauth
-            </div>
-            <button type="submit" class="btn btn-primary">Send Command</button>
-        </form>
+        </div>
     </div>
 @else
-
-    @auth
-        <div class="container">
-            <div class="h1 align-content-center">No devices have been setup up, please go to the <a
-                    href="{{ route('devices.index') }}">device manager</a> to add devices.
-            </div>
-        </div>
-    @else
-        <div class="container">
-            <div class="h1 align-content-center">Oops! The owner of this Pishock controller has no devices setup!</div>
-        </div>
-    @endauth
-
-
+    <div class="mx-auto max-w-xl px-4 py-24 text-center sm:px-6 lg:px-8">
+        @auth
+            <p class="text-lg text-gray-700 dark:text-gray-300">
+                No devices have been set up yet. Go to the
+                <a href="{{ route('devices.index') }}" class="text-indigo-600 hover:text-indigo-500">device manager</a>
+                to add one.
+            </p>
+        @else
+            <p class="text-lg text-gray-700 dark:text-gray-300">
+                Oops! The owner of this PiShock controller hasn't set up any devices yet.
+            </p>
+        @endauth
+    </div>
 @endif
+
+<style>
+    input[type="range"].max-indicator {
+        background-image: linear-gradient(to right, transparent calc(100% - var(--gray-percentage, 0%)), #9ca3af 0%);
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('pishock-form');
+        if (!form) {
+            return;
+        }
+
         const operationSelect = document.getElementById('operation');
         const intensityGroup = document.getElementById('intensity-group');
         const checkboxes = document.querySelectorAll('input[name="deviceShareCodes[]"]');
@@ -265,5 +284,4 @@
         @endauth
     });
 </script>
-</body>
-</html>
+</x-simple-layout>
