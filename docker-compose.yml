@@ -1,4 +1,11 @@
 services:
+    node:
+        image: node:20
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+        command: sh -c "npm ci && npm run build"
+
     app:
         build:
             context: .
@@ -10,6 +17,8 @@ services:
         depends_on:
             db:
                 condition: service_healthy
+            node:
+                condition: service_completed_successfully
         command: >
             sh -c "composer install --no-interaction --prefer-dist &&
                    php artisan key:generate --force &&

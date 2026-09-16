@@ -9,7 +9,7 @@ This app supports exactly one owner account. Public self-registration is intenti
 
 ## Requirements
 
-- Docker and Docker Compose (recommended — see below), **or**
+- Docker and Docker Compose (recommended — see below; nothing else needs to be installed), **or**
 - PHP 8.2+, Composer, Node.js/npm, and a MySQL/MariaDB database if running natively
 
 ## Setup (Docker)
@@ -22,22 +22,15 @@ This app supports exactly one owner account. Public self-registration is intenti
 
    Set `DB_HOST=db` (to match the `db` service below), and `PISHOCK_USERNAME` / `PISHOCK_API_KEY` to the credentials from your [PiShock account](https://pishock.com/#/account).
 
-2. Start the app and database:
+2. Start everything:
 
    ```bash
    docker compose up -d --build
    ```
 
-   This builds the PHP image, installs Composer dependencies, generates an `APP_KEY`, and runs migrations automatically. The app is served at [http://localhost:8000](http://localhost:8000).
+   This builds the PHP image, installs Composer dependencies, generates an `APP_KEY`, runs migrations, and builds the frontend assets (`npm ci && npm run build`, in its own `node` container — no Node needed on the host). The app is served at [http://localhost:8000](http://localhost:8000).
 
-3. Build the frontend assets (only needs Node locally, not Docker):
-
-   ```bash
-   npm install
-   npm run build
-   ```
-
-4. Create your owner account — this is the only way to get a login, since registration is disabled:
+3. Create your owner account — this is the only way to get a login, since registration is disabled:
 
    ```bash
    docker compose exec app php artisan owner:create "Your Name" "you@example.com" "a-strong-password"
@@ -45,9 +38,11 @@ This app supports exactly one owner account. Public self-registration is intenti
 
    Running it again once an owner exists will refuse — there can only be one.
 
-5. Log in at `/login`, add your device(s) under **Device management** (device name + PiShock share code), and optionally set max duration/intensity per operation from the control panel.
+4. Log in at `/login`, add your device(s) under **Device management** (device name + PiShock share code), and optionally set max duration/intensity per operation from the control panel.
 
-6. Create an operator link under **Operator links** for each person you want to be able to operate your devices, and share that link with them. Revoke it any time to cut off access.
+5. Create an operator link under **Operator links** for each person you want to be able to operate your devices, and share that link with them. Revoke it any time to cut off access.
+
+If you change frontend code later, rebuild assets with `docker compose up -d --build app` (it re-runs the `node` build before starting).
 
 ## Setup (without Docker)
 
