@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('commands', function (Request $request) {
             $key = $request->route('token') ?? $request->user()?->id ?? $request->ip();
 
-            return Limit::perMinute(10)->by('commands:' . $key);
+            return Limit::perMinute(config('pishock.commands_per_minute'))->by('commands:' . $key);
         });
     }
 }

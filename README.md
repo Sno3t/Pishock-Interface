@@ -69,3 +69,4 @@ php artisan test
 
 - Max duration/intensity limits set by the owner are enforced server-side — an operator can't exceed them by bypassing the UI.
 - `OperationHistory` records every command sent, attributed to either the owner or the named operator who sent it.
+- Sending commands is rate limited per owner/operator (`PISHOCK_COMMANDS_PER_MINUTE` in `.env`, default 20/minute) so no single person can spam commands. Change it if 20/minute is too low or too high for how you use it, and restart the app for the change to take effect.

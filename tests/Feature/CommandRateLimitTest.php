@@ -13,6 +13,17 @@ class CommandRateLimitTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const LIMIT = 3;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Fixed regardless of the app's configured default, and kept low
+        // so these tests don't need dozens of (slow, real) outbound requests.
+        config(['pishock.commands_per_minute' => self::LIMIT]);
+    }
+
     private function sendBeep(string $url, string $shareCode): TestResponse
     {
         return $this->post($url, [
@@ -22,22 +33,22 @@ class CommandRateLimitTest extends TestCase
         ]);
     }
 
-    public function test_an_operator_is_throttled_after_ten_commands_in_a_minute(): void
+    public function test_an_operator_is_throttled_after_the_configured_limit(): void
     {
         $device = Device::create(['device_name' => 'Test Shocker', 'share_code' => 'ABC123']);
         $operatorToken = OperatorToken::create(['name' => 'Alex']);
         $url = route('pishock.operate.send', $operatorToken->token);
 
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < self::LIMIT; $i++) {
             $this->sendBeep($url, $device->share_code)->assertRedirect();
         }
 
-        $this->assertDatabaseCount('operation_history', 10);
+        $this->assertDatabaseCount('operation_history', self::LIMIT);
 
         $response = $this->sendBeep($url, $device->share_code);
 
         $response->assertRedirect();
-        $this->assertDatabaseCount('operation_history', 10);
+        $this->assertDatabaseCount('operation_history', self::LIMIT);
     }
 
     public function test_separate_operator_tokens_have_independent_rate_limits(): void
@@ -47,17 +58,17 @@ class CommandRateLimitTest extends TestCase
         $sam = OperatorToken::create(['name' => 'Sam']);
 
         $alexUrl = route('pishock.operate.send', $alex->token);
-        for ($i = 0; $i < 11; $i++) {
+        for ($i = 0; $i < self::LIMIT + 1; $i++) {
             $this->sendBeep($alexUrl, $device->share_code);
         }
 
-        // Alex hit the 10/minute limit, so only 10 of Alex's 11 attempts landed.
-        $this->assertDatabaseCount('operation_history', 10);
+        // Alex hit the limit, so only LIMIT of Alex's LIMIT+1 attempts landed.
+        $this->assertDatabaseCount('operation_history', self::LIMIT);
 
         // Sam's bucket is untouched by Alex's activity.
         $this->sendBeep(route('pishock.operate.send', $sam->token), $device->share_code);
 
-        $this->assertDatabaseCount('operation_history', 11);
+        $this->assertDatabaseCount('operation_history', self::LIMIT + 1);
     }
 
     public function test_the_owner_is_rate_limited_separately_from_operators(): void
@@ -67,14 +78,14 @@ class CommandRateLimitTest extends TestCase
         $operatorToken = OperatorToken::create(['name' => 'Alex']);
 
         $operatorUrl = route('pishock.operate.send', $operatorToken->token);
-        for ($i = 0; $i < 11; $i++) {
+        for ($i = 0; $i < self::LIMIT + 1; $i++) {
             $this->sendBeep($operatorUrl, $device->share_code);
         }
 
-        $this->assertDatabaseCount('operation_history', 10);
+        $this->assertDatabaseCount('operation_history', self::LIMIT);
 
         $this->actingAs($user)->sendBeep('/pishock', $device->share_code);
 
-        $this->assertDatabaseCount('operation_history', 11);
+        $this->assertDatabaseCount('operation_history', self::LIMIT + 1);
     }
 }
