@@ -67,18 +67,36 @@ class PishockController extends Controller
      */
     protected function renderControls(?OperatorToken $operator = null): View
     {
-        $settings = Settings::all();
+        return view('pishock', [
+            'devices' => $this->devices,
+            'maxValues' => $this->buildMaxValues(),
+            'operator' => $operator,
+        ]);
+    }
+
+    /**
+     * The current max values, polled by the control panel so operators
+     * see a change the owner makes without needing to reload the page.
+     *
+     * @return JsonResponse
+     */
+    public function maxValues(): JsonResponse
+    {
+        return response()->json($this->buildMaxValues());
+    }
+
+    /**
+     * @return array<string, array<string, int>>
+     */
+    protected function buildMaxValues(): array
+    {
         $maxValues = [];
 
-        foreach ($settings as $setting) {
+        foreach (Settings::all() as $setting) {
             $maxValues[$setting->operation][$setting->type] = $setting->max_value;
         }
 
-        return view('pishock', [
-            'devices' => $this->devices,
-            'maxValues' => $maxValues,
-            'operator' => $operator,
-        ]);
+        return $maxValues;
     }
 
     /**

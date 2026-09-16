@@ -230,6 +230,28 @@
 
         setSliderMaxValues();
 
+        // Poll for max-value changes made elsewhere (e.g. the owner editing a
+        // limit in another tab) so this page reflects them without a reload.
+        const MAX_VALUES_POLL_MS = 5000;
+        setInterval(async () => {
+            try {
+                const response = await fetch('{{ route('maxValues') }}', {
+                    headers: { 'Accept': 'application/json' },
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                Object.keys(maxValues).forEach(key => delete maxValues[key]);
+                Object.assign(maxValues, data);
+                setSliderMaxValues();
+            } catch (e) {
+                // Transient network errors are fine to ignore; we'll try again on the next tick.
+            }
+        }, MAX_VALUES_POLL_MS);
+
         @unless ($operator)
         // Persist an edited max value for the current operation to the server
         async function updateMaxValue(type, newValue) {

@@ -34,5 +34,8 @@ Route::middleware('auth')->group(function () {
 Route::get('/pishock/{token}', [PishockController::class, 'operate'])->name('pishock.operate');
 Route::post('/pishock/{token}', [PishockController::class, 'sendCommandAs'])->name('pishock.operate.send');
 
+// Polled by the control panel so operators see a max-value change without reloading.
+Route::get('/max-values', [PishockController::class, 'maxValues'])->name('maxValues');
+
 
 require __DIR__.'/auth.php';
