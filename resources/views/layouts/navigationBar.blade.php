@@ -11,6 +11,9 @@
                 <a href="{{ route('operators.index') }}" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                     Operator links
                 </a>
+                <a href="{{ route('history.index') }}" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
+                    History
+                </a>
             </div>
 
             <form action="{{ route('logout') }}" method="POST">
