@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // This app is only ever meant to run behind a reverse proxy (see
+        // Dockerfile.prod / docker-compose.prod.yml), so its forwarded
+        // headers are trusted for correct HTTPS detection and client IPs.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (ThrottleRequestsException $e, $request) {

@@ -1,0 +1,48 @@
+# Build frontend assets
+FROM node:20 AS assets
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY resources resources
+COPY vite.config.js ./
+RUN npm run build
+
+# Install PHP dependencies (no dev tools in the production image).
+# Uses our own pinned PHP 8.3, not composer:2's bundled PHP, which tracks
+# whatever is newest and has previously been ahead of what this project's
+# dependencies support.
+FROM php:8.3-cli-bookworm AS vendor
+RUN apt-get update && apt-get install -y --no-install-recommends unzip libzip-dev \
+    && docker-php-ext-install zip \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-progress --optimize-autoloader
+
+# Runtime: php-fpm + nginx in one container
+FROM php:8.3-fpm-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libzip-dev libonig-dev nginx \
+    && docker-php-ext-install pdo_mysql mbstring bcmath zip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+COPY . .
+COPY --from=vendor /app/vendor vendor
+COPY --from=assets /app/public/build public/build
+
+# Regenerate the package-discovery manifest for this --no-dev install; any
+# copy of it from a local dev install (with dev-only packages) is stale.
+RUN php artisan package:discover --ansi
+
+RUN chown -R www-data:www-data storage bootstrap/cache
+
+COPY docker/nginx.conf /etc/nginx/sites-enabled/default
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 80
+
+ENTRYPOINT ["/entrypoint.sh"]

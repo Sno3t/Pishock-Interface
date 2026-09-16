@@ -1,0 +1,35 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile.prod
+        env_file:
+            - .env
+        ports:
+            - "8080:80"
+        depends_on:
+            db:
+                condition: service_healthy
+        volumes:
+            - storage:/var/www/html/storage
+        restart: unless-stopped
+
+    db:
+        image: mariadb:11
+        environment:
+            MARIADB_DATABASE: ${DB_DATABASE:-pishock}
+            MARIADB_USER: ${DB_USERNAME:-pishock}
+            MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+            MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+        volumes:
+            - pishock-db-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        restart: unless-stopped
+
+volumes:
+    pishock-db-data:
+    storage:

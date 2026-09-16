@@ -9,9 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::get('/dashboard', function () {
-    return redirect('');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::redirect('/dashboard', '/')->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [PishockController::class, 'index']);

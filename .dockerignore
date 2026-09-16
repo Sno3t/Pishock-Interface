@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.git
+node_modules
+vendor
+public/build
+bootstrap/cache/*.php
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+docker-compose.yml
+composer.phar
