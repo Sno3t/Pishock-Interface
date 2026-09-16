@@ -10,7 +10,7 @@ This app supports exactly one owner account. Public self-registration is intenti
 ## Requirements
 
 - Docker and Docker Compose (recommended — see below; nothing else needs to be installed), **or**
-- PHP 8.2+, Composer, Node.js/npm, and a MySQL/MariaDB database if running natively
+- PHP 8.2+ with the `pdo_mysql`, `mbstring`, `bcmath`, and `zip` extensions (add `pdo_sqlite` too if you want to run the test suite), Composer, Node.js/npm, and a MySQL/MariaDB database if running natively
 
 ## Setup (Docker)
 
