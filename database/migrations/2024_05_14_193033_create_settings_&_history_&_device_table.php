@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('settings', function (Blueprint $table) {
-            $table->id()->primary();
+            $table->id();
             $table->enum('operation', ControlTypes::$types);
             $table->enum('type', ['duration', 'intensity']);
             $table->integer('max_value');
@@ -23,7 +23,7 @@ return new class extends Migration
         });
 
         Schema::create('operation_history', function (Blueprint $table) {
-            $table->id()->primary();
+            $table->id();
             $table->enum('operation', ControlTypes::$types);
             $table->enum('type', ['duration', 'intensity']);
             $table->integer('value');
@@ -32,7 +32,7 @@ return new class extends Migration
         });
 
         Schema::create('devices', function (Blueprint $table) {
-            $table->id()->primary();
+            $table->id();
             $table->string('device_name');
             $table->string('share_code');
             $table->timestamps();
