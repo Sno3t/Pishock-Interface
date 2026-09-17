@@ -11,6 +11,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">When</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Who</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Devices</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Operation</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Duration</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Intensity</th>
@@ -22,9 +23,10 @@
                         <tr>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['created_at']->format('Y-m-d H:i:s') }}</td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['who'] }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['devices'] ? implode(', ', $command['devices']) : '---' }}</td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm capitalize text-gray-700 dark:text-gray-300">{{ $command['operation'] }}</td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['values']['duration'] ?? '—' }}</td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['values']['intensity'] ?? '—' }}</td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['values']['duration'] ?? '---' }}</td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ $command['values']['intensity'] ?? '---' }}</td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 @if ($command['succeeded'])
                                     <span class="text-green-600 dark:text-green-400">Success</span>
@@ -35,7 +37,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">No commands have been sent yet.</td>
+                            <td colspan="7" class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">No commands have been sent yet.</td>
                         </tr>
                     @endforelse
                     </tbody>

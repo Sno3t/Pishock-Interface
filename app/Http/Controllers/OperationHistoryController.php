@@ -71,6 +71,7 @@ class OperationHistoryController extends Controller
                 'created_at' => $entry->created_at,
                 'who' => $entry->user?->name ?? $entry->operatorToken?->name ?? 'Unknown',
                 'succeeded' => $entry->succeeded,
+                'devices' => $entry->devices ?? [],
                 'user_id' => $entry->user_id,
                 'operator_token_id' => $entry->operator_token_id,
                 'values' => [$entry->type => $entry->value],

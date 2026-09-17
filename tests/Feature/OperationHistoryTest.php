@@ -130,4 +130,39 @@ class OperationHistoryTest extends TestCase
         $response->assertSee('Success');
         $response->assertDontSee('Failed');
     }
+
+    public function test_the_devices_a_command_targeted_are_shown(): void
+    {
+        $user = User::factory()->create();
+
+        OperationHistory::create([
+            'operation' => 'shock',
+            'type' => 'duration',
+            'value' => 10,
+            'devices' => ['Living Room', 'Bedroom'],
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->get('/history');
+
+        $response->assertOk();
+        $response->assertSee('Living Room, Bedroom');
+    }
+
+    public function test_missing_device_history_shows_a_placeholder(): void
+    {
+        $user = User::factory()->create();
+
+        OperationHistory::create([
+            'operation' => 'beep',
+            'type' => 'duration',
+            'value' => 5,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->get('/history');
+
+        $response->assertOk();
+        $response->assertSeeTextInOrder(['beep', '---']);
+    }
 }

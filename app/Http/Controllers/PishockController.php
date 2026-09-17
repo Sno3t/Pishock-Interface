@@ -131,6 +131,7 @@ class PishockController extends Controller
     {
         $operation = $request->input('operation');
         $devices = $request->input('deviceShareCodes');
+        $deviceNames = array_map(fn (string $code) => $this->devices[$code] ?? $code, $devices);
 
         $duration = $this->clampToConfiguredMax($operation, 'duration', (int) $request->input('duration'));
         $intensity = $request->filled('intensity')
@@ -144,9 +145,9 @@ class PishockController extends Controller
             default => ['message' => 'Invalid operation', 'succeeded' => false],
         };
 
-        $this->recordHistory($operation, 'duration', $duration, $outcome['succeeded'], $operator);
+        $this->recordHistory($operation, 'duration', $duration, $outcome['succeeded'], $deviceNames, $operator);
         if ($intensity !== null) {
-            $this->recordHistory($operation, 'intensity', $intensity, $outcome['succeeded'], $operator);
+            $this->recordHistory($operation, 'intensity', $intensity, $outcome['succeeded'], $deviceNames, $operator);
         }
 
         return redirect()->back()->with('response', $outcome['message']);
@@ -163,13 +164,23 @@ class PishockController extends Controller
         return $max !== null ? min($value, $max) : $value;
     }
 
-    protected function recordHistory(string $operation, string $type, int $value, bool $succeeded, ?OperatorToken $operator = null): void
+    /**
+     * @param string $operation
+     * @param string $type
+     * @param int $value
+     * @param bool $succeeded
+     * @param string[] $deviceNames
+     * @param OperatorToken|null $operator
+     * @return void
+     */
+    protected function recordHistory(string $operation, string $type, int $value, bool $succeeded, array $deviceNames, ?OperatorToken $operator = null): void
     {
         OperationHistory::create([
             'operation' => $operation,
             'type' => $type,
             'value' => $value,
             'succeeded' => $succeeded,
+            'devices' => $deviceNames,
             'user_id' => $operator ? null : Auth::id(),
             'operator_token_id' => $operator?->id,
         ]);

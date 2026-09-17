@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Device;
+use App\Models\OperationHistory;
 use App\Models\OperatorToken;
 use App\Models\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -69,6 +70,8 @@ class OperatorTokenTest extends TestCase
             'operator_token_id' => $operatorToken->id,
             'user_id' => null,
         ]);
+
+        $this->assertSame(['Test Shocker'], OperationHistory::first()->devices);
     }
 
     public function test_operator_commands_are_clamped_to_the_configured_max(): void

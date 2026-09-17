@@ -21,12 +21,14 @@ class OperationHistory extends Model
         'type',
         'value',
         'succeeded',
+        'devices',
         'user_id',
         'operator_token_id',
     ];
 
     protected $casts = [
         'succeeded' => 'boolean',
+        'devices' => 'array',
     ];
 
     public function user(): BelongsTo
