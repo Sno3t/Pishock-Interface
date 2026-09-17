@@ -165,4 +165,41 @@ class OperationHistoryTest extends TestCase
         $response->assertOk();
         $response->assertSeeTextInOrder(['beep', '---']);
     }
+
+    public function test_guests_cannot_prune_history(): void
+    {
+        $this->post('/history/prune')->assertRedirect(route('login'));
+    }
+
+    public function test_the_owner_can_manually_prune_old_history(): void
+    {
+        $user = User::factory()->create();
+
+        $old = OperationHistory::create(['operation' => 'beep', 'type' => 'duration', 'value' => 5]);
+        $old->forceFill(['created_at' => now()->subDays(200)])->save();
+
+        $recent = OperationHistory::create(['operation' => 'beep', 'type' => 'duration', 'value' => 5]);
+
+        config(['pishock.history_retention_days' => 180]);
+
+        $response = $this->actingAs($user)->post(route('history.prune'));
+
+        $response->assertRedirect(route('history.index'));
+        $this->assertSoftDeleted($old);
+        $this->assertNotSoftDeleted($recent);
+    }
+
+    public function test_manual_history_pruning_is_disabled_when_retention_is_zero(): void
+    {
+        $user = User::factory()->create();
+
+        $old = OperationHistory::create(['operation' => 'beep', 'type' => 'duration', 'value' => 5]);
+        $old->forceFill(['created_at' => now()->subDays(2000)])->save();
+
+        config(['pishock.history_retention_days' => 0]);
+
+        $this->actingAs($user)->post(route('history.prune'));
+
+        $this->assertNotSoftDeleted($old);
+    }
 }

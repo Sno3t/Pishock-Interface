@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class OperatorToken extends Model
 {
+    use SoftDeletes;
+
     /**
      * @var string[]
      */
@@ -55,5 +58,22 @@ class OperatorToken extends Model
     public function revoke(): void
     {
         $this->forceFill(['revoked_at' => now()])->save();
+    }
+
+    /**
+     * Archive (soft-delete) links that have been revoked or expired for at
+     * least $days. Active links are never touched. Uses <= rather than <
+     * so that $days = 0 (an immediate manual archive, right after a revoke)
+     * reliably catches a revoked_at from the same second - DATETIME columns
+     * don't carry sub-second precision, so a strict < can miss it.
+     */
+    public static function pruneInactive(int $days): int
+    {
+        $cutoff = now()->subDays($days);
+
+        return static::where(function (Builder $query) use ($cutoff) {
+            $query->where('revoked_at', '<=', $cutoff)
+                ->orWhere('expires_at', '<=', $cutoff);
+        })->delete();
     }
 }

@@ -24,7 +24,7 @@ RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-p
 FROM php:8.3-fpm-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libzip-dev libonig-dev nginx \
+        libzip-dev libonig-dev nginx cron \
     && docker-php-ext-install pdo_mysql mbstring bcmath zip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -40,6 +40,10 @@ RUN php artisan package:discover --ansi
 RUN chown -R www-data:www-data storage bootstrap/cache
 
 COPY docker/nginx.conf /etc/nginx/sites-enabled/default
+# Drives scheduled tasks (history/operator link pruning); runs as root so
+# cron can drop to www-data per the user field in this file.
+COPY docker/crontab /etc/cron.d/schedule
+RUN chmod 0644 /etc/cron.d/schedule
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

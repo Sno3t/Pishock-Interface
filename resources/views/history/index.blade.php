@@ -3,7 +3,20 @@
 
     <div class="py-12">
         <div class="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
-            <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Operation history</h1>
+            <div class="flex items-start justify-between gap-4">
+                <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Operation history</h1>
+
+                <form action="{{ route('history.prune') }}" method="POST" onsubmit="return confirm('Archive history entries older than the retention period? They stay in the database but disappear from this list.')">
+                    @csrf
+                    <x-secondary-button type="submit" class="whitespace-nowrap">Archive old history</x-secondary-button>
+                </form>
+            </div>
+
+            @if (session('status'))
+                <div class="rounded-md bg-green-50 p-4 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
+                    {{ session('status') }}
+                </div>
+            @endif
 
             <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OperationHistory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -35,6 +36,30 @@ class OperationHistoryController extends Controller
         );
 
         return view('history.index', ['history' => $history]);
+    }
+
+    /**
+     * Manually run the same archiving that otherwise happens on a schedule,
+     * instead of waiting for it.
+     *
+     * @return RedirectResponse
+     */
+    public function prune(): RedirectResponse
+    {
+        $days = (int) config('pishock.history_retention_days');
+
+        if ($days <= 0) {
+            return redirect()->route('history.index')
+                ->with('status', 'Pruning is disabled (set PISHOCK_HISTORY_RETENTION_DAYS to enable it).');
+        }
+
+        $pruned = OperationHistory::pruneOld($days);
+
+        $message = $pruned === 0
+            ? "No history older than {$days} day(s) to archive."
+            : "Archived {$pruned} history " . str('entry')->plural($pruned) . " older than {$days} day(s).";
+
+        return redirect()->route('history.index')->with('status', $message);
     }
 
     /**

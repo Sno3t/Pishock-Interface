@@ -189,4 +189,43 @@ class OperatorTokenTest extends TestCase
         $this->get('/register')->assertNotFound();
         $this->post('/register')->assertNotFound();
     }
+
+    public function test_guests_cannot_prune_operator_links(): void
+    {
+        $this->post('/operators/prune')->assertRedirect(route('login'));
+    }
+
+    public function test_the_owner_can_manually_archive_every_revoked_or_expired_operator_link(): void
+    {
+        $user = User::factory()->create();
+        $justRevoked = OperatorToken::create(['name' => 'JustRevoked']);
+        $justRevoked->revoke();
+        $justExpired = OperatorToken::create(['name' => 'JustExpired', 'expires_at' => now()->subMinute()]);
+        $old = OperatorToken::create(['name' => 'Old']);
+        $old->forceFill(['revoked_at' => now()->subDays(40)])->save();
+        $active = OperatorToken::create(['name' => 'Active']);
+
+        $response = $this->actingAs($user)->post(route('operators.prune'));
+
+        $response->assertRedirect(route('operators.index'));
+        $this->assertSoftDeleted($justRevoked);
+        $this->assertSoftDeleted($justExpired);
+        $this->assertSoftDeleted($old);
+        $this->assertNotSoftDeleted($active);
+    }
+
+    public function test_manual_pruning_ignores_the_configured_retention_period(): void
+    {
+        $user = User::factory()->create();
+        $justRevoked = OperatorToken::create(['name' => 'JustRevoked']);
+        $justRevoked->revoke();
+
+        // A retention period of 0 disables the scheduled job, but a manual
+        // click is an explicit action and should still archive right away.
+        config(['pishock.operator_token_retention_days' => 0]);
+
+        $this->actingAs($user)->post(route('operators.prune'));
+
+        $this->assertSoftDeleted($justRevoked);
+    }
 }

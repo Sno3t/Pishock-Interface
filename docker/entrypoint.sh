@@ -10,4 +10,5 @@ su www-data -s /bin/sh -c "php artisan route:cache"
 su www-data -s /bin/sh -c "php artisan view:cache"
 
 php-fpm -D
+cron
 exec nginx -g 'daemon off;'

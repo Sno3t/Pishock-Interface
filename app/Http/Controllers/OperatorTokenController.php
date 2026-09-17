@@ -48,4 +48,22 @@ class OperatorTokenController extends Controller
 
         return redirect()->route('operators.index')->with('status', 'Operator link revoked.');
     }
+
+    /**
+     * Unlike the scheduled job (which waits out a grace period before
+     * archiving, in case a link was revoked/expired by mistake), a manual
+     * click here archives every currently revoked/expired link right away.
+     *
+     * @return RedirectResponse
+     */
+    public function prune(): RedirectResponse
+    {
+        $pruned = OperatorToken::pruneInactive(0);
+
+        $message = $pruned === 0
+            ? 'No revoked or expired links to archive.'
+            : "Archived {$pruned} revoked/expired operator link" . ($pruned === 1 ? '' : 's') . '.';
+
+        return redirect()->route('operators.index')->with('status', $message);
+    }
 }

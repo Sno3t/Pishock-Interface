@@ -65,6 +65,12 @@ docker compose exec app php artisan owner:reset-password
 php artisan owner:reset-password
 ```
 
+Old operator links and operation history are pruned automatically via Laravel's scheduler (see **Notes** below), which needs a cron entry to actually run outside Docker:
+
+```
+* * * * * cd /path/to/Pishock-Interface && php artisan schedule:run >> /dev/null 2>&1
+```
+
 ## Deploying to production
 
 The Docker setup above (`docker-compose.yml`) is for local development: it runs `php artisan serve`, Laravel's single-threaded dev server, and bind-mounts your working directory. For a real deployment, use `docker-compose.prod.yml` instead, which:
@@ -72,6 +78,7 @@ The Docker setup above (`docker-compose.yml`) is for local development: it runs 
 - Builds a self-contained image (`Dockerfile.prod`) with your code and built assets baked in, rather than bind-mounted
 - Runs php-fpm behind nginx instead of `artisan serve`
 - Runs `migrate`, `config:cache`, `route:cache`, and `view:cache` on startup
+- Runs a cron daemon that drives Laravel's scheduler every minute, so old operator links and history get pruned automatically (no extra setup needed)
 
 This app doesn't handle TLS itself — it's meant to sit behind a reverse proxy (nginx, Caddy, Cloudflare Tunnel, whatever you already run) that terminates HTTPS and forwards to it. It trusts that proxy's forwarded headers unconditionally (`bootstrap/app.php`), since it's never meant to be reachable except through one.
 
@@ -116,3 +123,4 @@ php artisan test
 - Max duration/intensity limits set by the owner are enforced server-side — an operator can't exceed them by bypassing the UI.
 - `OperationHistory` records every command sent, attributed to either the owner or the named operator who sent it.
 - Sending commands is rate limited per owner/operator (`PISHOCK_COMMANDS_PER_MINUTE` in `.env`, default 20/minute) so no single person can spam commands. Change it if 20/minute is too low or too high for how you use it, and restart the app for the change to take effect.
+- Operator links can optionally be given an expiry, on top of manual revocation. Revoked/expired links and old history rows are archived (soft-deleted, not permanently erased) daily by `operators:prune` and `history:prune`, once they've been inactive/old for longer than `PISHOCK_OPERATOR_TOKEN_RETENTION_DAYS` (default 30) / `PISHOCK_HISTORY_RETENTION_DAYS` (default 180) days. They disappear from the UI but stay in the database; set either to `0` to disable that pruning.

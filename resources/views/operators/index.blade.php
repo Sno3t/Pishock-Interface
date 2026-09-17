@@ -3,12 +3,21 @@
 
     <div class="py-12">
         <div class="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
-            <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Operator links</h1>
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Operator links</h1>
 
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-                Each link below lets one named person operate your devices, within your configured max values,
-                without needing an account. Revoke a link at any time to cut off access.
-            </p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Each link below lets one named person operate your devices, within your configured max values,
+                        without needing an account. Revoke a link at any time to cut off access.
+                    </p>
+                </div>
+
+                <form action="{{ route('operators.prune') }}" method="POST" onsubmit="return confirm('Archive every revoked or expired link right now? They stay in the database but disappear from this list.')">
+                    @csrf
+                    <x-secondary-button type="submit" class="whitespace-nowrap">Archive revoked/expired links</x-secondary-button>
+                </form>
+            </div>
 
             @if (session('status'))
                 <div class="rounded-md bg-green-50 p-4 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
