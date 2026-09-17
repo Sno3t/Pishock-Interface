@@ -6,6 +6,7 @@ use App\Models\Device;
 use App\Models\OperationHistory;
 use App\Models\OperatorToken;
 use App\Models\Settings;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -46,6 +47,65 @@ class OperatorTokenTest extends TestCase
         $response = $this->get('/pishock/does-not-exist');
 
         $response->assertNotFound();
+    }
+
+    public function test_an_expired_operator_token_cannot_view_the_control_panel(): void
+    {
+        $operatorToken = OperatorToken::create(['name' => 'Alex', 'expires_at' => now()->subMinute()]);
+
+        $response = $this->get(route('pishock.operate', $operatorToken->token));
+
+        $response->assertNotFound();
+    }
+
+    public function test_an_expired_operator_token_cannot_send_commands(): void
+    {
+        $device = Device::create(['device_name' => 'Test Shocker', 'share_code' => 'ABC123']);
+        $operatorToken = OperatorToken::create(['name' => 'Alex', 'expires_at' => now()->subMinute()]);
+
+        $response = $this->post(route('pishock.operate.send', $operatorToken->token), [
+            'operation' => 'beep',
+            'duration' => 5,
+            'deviceShareCodes' => [$device->share_code],
+        ]);
+
+        $response->assertNotFound();
+    }
+
+    public function test_a_token_with_a_future_expiry_can_still_be_used(): void
+    {
+        Device::create(['device_name' => 'Test Shocker', 'share_code' => 'ABC123']);
+        $operatorToken = OperatorToken::create(['name' => 'Alex', 'expires_at' => now()->addDay()]);
+
+        $response = $this->get(route('pishock.operate', $operatorToken->token));
+
+        $response->assertOk();
+        $response->assertSee('Alex');
+    }
+
+    public function test_an_operator_link_can_be_created_with_an_expiry(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('operators.store'), [
+            'name' => 'Alex',
+            'expires_at' => now()->addDay()->format('Y-m-d\TH:i'),
+        ]);
+
+        $response->assertRedirect(route('operators.index'));
+        $this->assertNotNull(OperatorToken::where('name', 'Alex')->first()->expires_at);
+    }
+
+    public function test_an_operator_link_expiry_must_be_in_the_future(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('operators.store'), [
+            'name' => 'Alex',
+            'expires_at' => now()->subDay()->format('Y-m-d\TH:i'),
+        ]);
+
+        $response->assertSessionHasErrors('expires_at');
     }
 
     public function test_an_operator_can_send_a_command_and_it_is_attributed_to_them(): void

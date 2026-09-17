@@ -27,9 +27,13 @@ class OperatorTokenController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
-        OperatorToken::create(['name' => $validated['name']]);
+        OperatorToken::create([
+            'name' => $validated['name'],
+            'expires_at' => $validated['expires_at'] ?? null,
+        ]);
 
         return redirect()->route('operators.index')->with('status', 'Operator link created.');
     }

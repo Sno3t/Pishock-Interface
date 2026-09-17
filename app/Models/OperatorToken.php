@@ -14,10 +14,12 @@ class OperatorToken extends Model
      */
     protected $fillable = [
         'name',
+        'expires_at',
     ];
 
     protected $casts = [
         'revoked_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -29,7 +31,10 @@ class OperatorToken extends Model
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->whereNull('revoked_at');
+        return $query->whereNull('revoked_at')
+            ->where(function (Builder $query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            });
     }
 
     public function history(): HasMany
@@ -40,6 +45,11 @@ class OperatorToken extends Model
     public function isRevoked(): bool
     {
         return $this->revoked_at !== null;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
     }
 
     public function revoke(): void
