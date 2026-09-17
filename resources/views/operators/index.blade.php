@@ -76,7 +76,11 @@
                                 @endif
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                                {{ $operatorToken->expires_at?->format('Y-m-d H:i \U\T\C') ?? '---' }}
+                                @if ($operatorToken->expires_at)
+                                    <span class="expiry-local" data-utc="{{ $operatorToken->expires_at->toIso8601String() }}">{{ $operatorToken->expires_at->format('Y-m-d H:i \U\T\C') }}</span>
+                                @else
+                                    ---
+                                @endif
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 @if ($operatorToken->isRevoked())
@@ -151,6 +155,23 @@
 
             form.addEventListener('submit', () => {
                 utcInput.value = localInput.value ? new Date(localInput.value).toISOString() : '';
+            });
+        })();
+
+        // Expiry timestamps are rendered server-side in UTC (so the page
+        // works without JS), then swapped here for the viewer's own local
+        // time - whatever that happens to be - rather than a fixed zone.
+        (() => {
+            const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const pad = (n) => String(n).padStart(2, '0');
+
+            document.querySelectorAll('.expiry-local').forEach((el) => {
+                const date = new Date(el.dataset.utc);
+                if (isNaN(date)) {
+                    return;
+                }
+
+                el.textContent = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())} (${zone})`;
             });
         })();
     </script>

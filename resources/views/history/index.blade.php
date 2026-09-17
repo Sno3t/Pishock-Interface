@@ -6,7 +6,17 @@
             <div class="flex items-start justify-between gap-4">
                 <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Operation history</h1>
 
-                <form action="{{ route('history.prune') }}" method="POST" onsubmit="return confirm('Archive history entries older than the retention period? They stay in the database but disappear from this list.')">
+                @php
+                    $historyRetentionDays = (int) config('pishock.history_retention_days');
+                    $pruneConfirmMessage = $historyRetentionDays > 0
+                        ? "Archive history entries older than {$historyRetentionDays} days? They stay in the database but disappear from this list."
+                        : 'History pruning is disabled (PISHOCK_HISTORY_RETENTION_DAYS is 0), so this will not do anything.';
+                @endphp
+                <form
+                    action="{{ route('history.prune') }}"
+                    method="POST"
+                    onsubmit="return confirm('{{ $pruneConfirmMessage }}')"
+                >
                     @csrf
                     <x-secondary-button type="submit" class="whitespace-nowrap">Archive old history</x-secondary-button>
                 </form>
