@@ -18,7 +18,14 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->get('/profile');
 
+        // A plain assertOk() previously passed even though <x-app-layout>'s
+        // content was silently discarded (layouts/app.blade.php used
+        // @yield('content'), which only @extends/@section populate - not
+        // the component slot <x-app-layout> actually passes). Assert the
+        // form itself is actually there, not just that the request didn't 500.
         $response->assertOk();
+        $response->assertSee('Profile Information');
+        $response->assertSee('name="name"', false);
     }
 
     public function test_profile_information_can_be_updated(): void
